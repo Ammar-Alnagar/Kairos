@@ -73,7 +73,7 @@ graph TD
 
 ---
 
-##  Tech Stack
+## Tech Stack
 - **Language:** Rust (Stable)
 - **Async Runtime:** Tokio
 - **Proxy Layer:** Cloudflare Pingora (Custom HTTP/2 proxy)
@@ -83,7 +83,7 @@ graph TD
 
 ---
 
-##  Development Phases
+## Development Phases
 
 | Phase | Status | Focus |
 | :--- | :--- | :--- |
@@ -95,14 +95,14 @@ graph TD
 
 ---
 
-##  What This Demonstrates
+## What This Demonstrates
 This project is a rigorous exercise in:
 1.  **Production Rust:** Writing zero-copy, high-concurrency code with Pingora.
 2.  **Distributed Systems:** Handling eventual consistency, state synchronization, and fault tolerance.
 3.  **Algorithms:** Implementing online learning (Bandits) and caching strategies in a low-latency environment.
 4.  **Systems Design:** Moving beyond theory to implement a full-stack router with observability.
 
-## 🚦 Getting Started
+## Getting Started
 *Clone the repo and build:*
 ```bash
 git clone https://github.com/Ammar-Alnagar/Kairos
