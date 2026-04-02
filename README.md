@@ -1,4 +1,3 @@
-```markdown
 # Kairos
 **High-Performance Load Balancer & Proxy for LLM Inference**
 
@@ -252,4 +251,3 @@ metrics:
 ---
 
 Built by Ammar for deliberate practice in production Rust and distributed systems engineering.
-```
