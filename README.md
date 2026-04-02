@@ -1,107 +1,85 @@
+```markdown
 # Kairos
 **Adaptive Inference Router with a Learning Routing Plane**
 
-> **Note:** This is a hands-on mastery project focused on building production-grade Rust systems, deepening knowledge of distributed networking, and implementing complex routing algorithms. It serves as a practical vehicle for mastering Rust, Pingora, and high-performance distributed systems design.
+> **Project Goal:** A deliberate practice project for mastering production Rust, async concurrency, and distributed networking. Built to develop hands-on muscle memory with high-performance proxies, state management, and low-latency routing algorithms.
 
 ## Overview
-Kairos sits in front of a fleet of LLM inference engines (vLLM, SGLang, MAX). Unlike dumb routers (round-robin, least-connections), Kairos adapts to traffic patterns in real-time. It combines **prefix-aware caching**, **dynamic metric scraping**, and **online learning** (Multi-Armed Bandits) to route requests to the optimal engine.
+Kairos sits in front of a fleet of LLM inference engines (vLLM, SGLang, MAX). It replaces static load balancers with a metric-driven router that evaluates fleet state, tracks KV cache locality, and selects the optimal routing strategy using statistical bandits.
 
-### Why Kairos?
-- **Performance:** Built on **Cloudflare Pingora** for superior proxying and concurrency compared to standard Axum.
-- **Intelligence:** Learns which routing strategy works best for current conditions using UCB bandits.
-- **Visibility:** Scrapes `/metrics` from all engines for real-time fleet state (queue depth, latency, health) without intrusive active polling.
-- **Learning Focus:** Designed to build "muscle memory" in Rust, async Tokio patterns, and distributed system hardening.
+### Core Design
+- **Pingora Native:** Uses Cloudflare Pingora for zero-copy proxying and connection management.
+- **Metric-Driven Scraping:** Polls each engine /metrics endpoint (Prometheus format) every 1s to track queue depth, health, and TTFT. Replaces active probing or heartbeat pings.
+- **Statistical Strategy Selection:** Uses Upper Confidence Bound (UCB) to balance exploration and exploitation across routing strategies. Pure arithmetic. No tokenizers, no RL, no policy networks.
+- **Prefix-Aware Routing:** Maintains an in-memory metadata store (backed by a custom WAL) to track which engine holds cached KV prefixes for given prompts.
 
----
+## Routing Strategies
+| Strategy | Logic | Use Case |
+|----------|-------|----------|
+| RoundRobin | Cyclic distribution | Baseline fallback |
+| LeastLoad | Lowest active queue depth | Traffic spikes, batch-heavy workloads |
+| LowestLatency | Best recent TTFT | Latency-sensitive inference |
+| PrefixLocality | Longest cached prompt prefix match | KV cache reuse, multi-turn chats |
 
-##  Core Features
+The UCB selector assigns a score to each strategy based on observed inverse-TTFT rewards and exploration bonuses, dynamically weighting selection toward the best performer for current traffic conditions.
 
-### 1. Prefix-Aware Routing
-Maintains an in-memory metadata store (with WAL persistence) to track KV cache locations.
-- **Strategy:** `PrefixLocality` routes requests to the engine holding the longest matching prompt prefix cache, minimizing re-computation.
-
-### 2. Dynamic Strategy Portfolio
-Supports multiple routing strategies that can be swapped dynamically:
-- `PrefixLocality`: Longest cached prefix match.
-- `LeastLoad`: Routes to the engine with the lowest queue depth.
-- `LowestLatency`: Routes based on recent Time-To-First-Token (TTFT).
-- `RoundRobin`: Baseline fallback.
-
-### 3. The Learning Routing Plane
-Treats strategy selection as a **Multi-Armed Bandit (UCB)** problem.
-- Observes outcomes (inverse TTFT).
-- Shifts weights toward the best-performing strategy for the current traffic pattern.
-- Continuously learns and adapts without human intervention.
-
-### 4. Fleet Scraper & Observability
-A background task scrapes each engine's `/metrics` endpoint every second.
-- **Data Collected:** Queue depth, health status, latency metrics.
-- **Benefit:** Replaces expensive active probing with lightweight metric scraping for accurate fleet state.
-
----
-
-##  Architecture
-
+## Architecture
 ```mermaid
 graph TD
-    Client[Client Request] --> Listener[Kairos Listener<br/>Pingora Proxy]
+    Client[Client Request] --> Pingora[Pingora Listener]
     
     subgraph Routing_Brain [Routing Brain]
-        Strategy_Portfolio[Strategy Portfolio<br/>PrefixLocality, LeastLoad, etc.]
-        Bandit[UCB Bandit<br/>Selects Strategy]
+        UCB[UCB Strategy Selector]
+        Portfolio[Strategy Portfolio]
     end
     
-    Listener --> Routing_Brain
-    Routing_Brain --> Metrics_Store[(Prefix Metadata Store + WAL)]
-    Routing_Brain --> Fleet_Scraper[Fleet Scraper<br/>Scrapes /metrics every 1s]
+    Pingora --> UCB
+    UCB --> Portfolio
+    Portfolio --> Pingora
     
-    Fleet_Scraper --> Fleet_State[Fleet State Cache]
-    Metrics_Store --> Routing_Brain
-    Fleet_State --> Routing_Brain
+    subgraph State [Runtime State]
+        Scraper[Fleet Scraper<br/>HTTP /metrics polling]
+        Store[(Prefix Store + WAL)]
+    end
     
-    Routing_Brain --> Engine[Inference Engine<br/>vLLM / SGLang / MAX]
+    Scraper -. 1s .-> FleetState[Fleet State Cache]
+    Store -. Cache Map .-> Portfolio
+    FleetState -. Metrics .-> UCB
 ```
 
-### Key Components
-| Component | Description | Tech |
-| :--- | :--- | :--- |
-| **Listener** | High-performance ingress proxy handling OpenAI-compatible requests. | Pingora |
-| **Routing Brain** | Orchestrates strategy selection and engine picking. | Rust / Tokio |
-| **Bandit** | Implements Upper Confidence Bound (UCB) algorithm for strategy optimization. | Rust |
-| **Prefix Store** | In-memory hash map with Write-Ahead Log (WAL) for crash recovery. | Custom Rust |
-| **Fleet Scraper** | Background worker aggregating metrics from all backend engines. | rust-prometheus |
-
----
+### Components
+| Component | Responsibility | Implementation |
+|-----------|----------------|----------------|
+| Listener | Ingress proxy, OpenAI-compatible /v1/chat/completions routing | Pingora ProxyHttp trait |
+| Routing Brain | Strategy evaluation and engine selection | Stateless trait implementations |
+| UCB Selector | Statistical strategy weighting | Running averages plus exploration bonus |
+| Prefix Store | prompt_hash to engine_id mapping plus crash recovery | In-memory HashMap plus custom append-only WAL |
+| Fleet Scraper | Metric aggregation from backend engines | Async HTTP client plus prometheus-parse |
 
 ## Tech Stack
-- **Language:** Rust (Stable)
-- **Async Runtime:** Tokio
-- **Proxy Layer:** Cloudflare Pingora (Custom HTTP/2 proxy)
-- **Metrics:** `rust-prometheus`
-- **Persistence:** Custom Append-Only WAL with CRC checks
-- **Networking:** gRPC/HTTP2 for internal scraping
+| Layer | Technology |
+|-------|------------|
+| Language | Rust (Stable) |
+| Async Runtime | Tokio |
+| Proxy Engine | Cloudflare Pingora |
+| Metrics Parsing | prometheus-parse + regex |
+| Persistence | Custom append-only WAL with CRC32 validation |
+| Protocol | HTTP/1.1 for scraping, HTTP/2 for upstream inference |
 
----
+## Build Phases
+| Phase | Status | Deliverable |
+|-------|--------|-------------|
+| 1. Working Proxy | In Progress | Pingora listener, round-robin routing, local admin/metrics, request forwarding |
+| 2. Fleet Visibility | Todo | Background /metrics scraper, LeastLoad plus LowestLatency strategies |
+| 3. Prefix Awareness | Todo | Prefix metadata store, WAL persistence, PrefixLocality strategy |
+| 4. Strategy Learning | Todo | UCB bandit integration, reward observation (1/TTFT), dynamic weighting |
+| 5. Hardening | Todo | Circuit breakers, retry logic, graceful shutdown, config validation |
 
-## Development Phases
+## Constraint Compliance
+- No Tokenizers: Prefix matching uses byte-level hashing. Zero NLP/tokenization overhead.
+- No RL: UCB is a deterministic statistical selector. No gradients, no policy updates, no stateful learning loops.
+- Pingora Core: Proxy and routing logic built entirely on Pingora.
+- Learning Focus: Explicitly scoped for Rust systems mastery: async patterns, zero-copy routing, concurrent state, WAL design, and observability.
 
-| Phase | Status | Focus |
-| :--- | :--- | :--- |
-| **Phase 1** | In Progress | Pingora listener, basic round-robin, Axum admin/metrics, forwarding logic. |
-| **Phase 2** | Todo | Background scraper for `/metrics`. Implement `LeastLoad` & `LowestLatency`. |
-| **Phase 3** | Todo | Prefix metadata store + WAL. Implement `PrefixLocality` strategy. |
-| **Phase 4** | Todo | Integrate UCB Bandit to select strategies dynamically based on rewards. |
-| **Phase 5** | Todo | Hardening: Circuit breakers, retries, graceful shutdown, configuration management. |
-
----
-
-## What This Demonstrates
-This project is a rigorous exercise in:
-1.  **Production Rust:** Writing zero-copy, high-concurrency code with Pingora.
-2.  **Distributed Systems:** Handling eventual consistency, state synchronization, and fault tolerance.
-3.  **Algorithms:** Implementing online learning (Bandits) and caching strategies in a low-latency environment.
-4.  **Systems Design:** Moving beyond theory to implement a full-stack router with observability.
-
-
----
-*Built by Ammar for mastering Rust and Distributed Systems.*
+Built by Ammar for deliberate practice in production Rust and distributed systems engineering.
+```
