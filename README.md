@@ -87,11 +87,11 @@ graph TD
 
 | Phase | Status | Focus |
 | :--- | :--- | :--- |
-| **Phase 1** | 🟡 In Progress | Pingora listener, basic round-robin, Axum admin/metrics, forwarding logic. |
-| **Phase 2** | ⬜ Todo | Background scraper for `/metrics`. Implement `LeastLoad` & `LowestLatency`. |
-| **Phase 3** | ⬜ Todo | Prefix metadata store + WAL. Implement `PrefixLocality` strategy. |
-| **Phase 4** | ⬜ Todo | Integrate UCB Bandit to select strategies dynamically based on rewards. |
-| **Phase 5** | ⬜ Todo | Hardening: Circuit breakers, retries, graceful shutdown, configuration management. |
+| **Phase 1** | In Progress | Pingora listener, basic round-robin, Axum admin/metrics, forwarding logic. |
+| **Phase 2** | Todo | Background scraper for `/metrics`. Implement `LeastLoad` & `LowestLatency`. |
+| **Phase 3** | Todo | Prefix metadata store + WAL. Implement `PrefixLocality` strategy. |
+| **Phase 4** | Todo | Integrate UCB Bandit to select strategies dynamically based on rewards. |
+| **Phase 5** | Todo | Hardening: Circuit breakers, retries, graceful shutdown, configuration management. |
 
 ---
 
@@ -102,17 +102,6 @@ This project is a rigorous exercise in:
 3.  **Algorithms:** Implementing online learning (Bandits) and caching strategies in a low-latency environment.
 4.  **Systems Design:** Moving beyond theory to implement a full-stack router with observability.
 
-## Getting Started
-*Clone the repo and build:*
-```bash
-git clone https://github.com/Ammar-Alnagar/Kairos
-cd kairos
-cargo build --release
-```
-*Run with default config:*
-```bash
-./target/release/kairos --config config.yaml
-```
 
 ---
 *Built by Ammar for mastering Rust and Distributed Systems.*
