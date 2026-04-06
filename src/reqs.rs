@@ -1,4 +1,10 @@
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone)]
+pub struct AppState {
+    pub client: Client,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InMessages {
