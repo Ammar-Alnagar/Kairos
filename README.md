@@ -7,7 +7,7 @@
 Kairos is a load balancer and reverse proxy that sits in front of a fleet of LLM inference engines (vLLM, SGLang, MAX). It provides intelligent request routing based on real-time metrics scraped from backend inference engines, with multiple selection algorithms and a dashboard for visibility into fleet health and performance.
 
 ### Core Design
-- **Pingora Native:** Uses Cloudflare Pingora for zero-copy proxying and connection management.
+- **Axum Framework:** Uses Axum for HTTP routing and request handling.
 - **Metrics Scraping:** Continuously polls each engine's `/metrics` endpoint (Prometheus format) to track queue depth, health status, TTFT (Time to First Token), and throughput.
 - **Multiple Selection Algorithms:** Supports various load balancing strategies including Round Robin, Least Load, Lowest Latency, and Prefix Locality routing.
 - **Real-Time Visibility:** Provides a dashboard and metrics endpoint for users to monitor fleet state, backend health, and routing decisions.
@@ -31,16 +31,16 @@ The strategy selector evaluates backend metrics and applies the configured algor
 
 ```mermaid
 graph TD
-    Client[Client Request] --> Pingora[Pingora Listener]
+    Client[Client Request] --> Axum[Axum Listener]
 
     subgraph Routing_Brain [Routing Brain]
         Selector[Strategy Selector]
         Portfolio[Strategy Portfolio]
     end
 
-    Pingora --> Selector
+    Axum --> Selector
     Selector --> Portfolio
-    Portfolio --> Pingora
+    Portfolio --> Axum
 
     subgraph State [Runtime State]
         Scraper[Fleet Scraper<br/>HTTP /metrics polling]
@@ -57,7 +57,7 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant C as Client
-    participant P as Pingora Proxy
+    participant P as Axum Proxy
     participant S as Strategy Selector
     participant F as Fleet State
     participant B as Backend Engine
@@ -138,7 +138,7 @@ graph LR
 
 | Component | Responsibility | Implementation |
 |-----------|----------------|----------------|
-| Listener | Ingress proxy, OpenAI-compatible /v1/chat/completions routing | Pingora ProxyHttp trait |
+| Listener | Ingress proxy, OpenAI-compatible /v1/chat/completions routing | Axum HTTP server |
 | Routing Brain | Strategy evaluation and backend selection | Trait-based strategy implementations |
 | Strategy Selector | Algorithm-based backend weighting | Configurable selection algorithms |
 | Fleet Scraper | Metric aggregation from backend engines | Async HTTP client (reqwest) + prometheus-parse |
@@ -201,7 +201,7 @@ metrics:
 |-------|------------|
 | Language | Rust (Stable) |
 | Async Runtime | Tokio |
-| Proxy Engine | Cloudflare Pingora |
+| Web Framework | Axum |
 | HTTP Client | reqwest |
 | Metrics | prometheus crate |
 | Metrics Parsing | prometheus-parse + regex |
@@ -234,7 +234,7 @@ metrics:
 
 | Phase | Status | Deliverable |
 |-------|--------|-------------|
-| 1. Working Proxy | In Progress | Pingora listener, round-robin routing, local admin/metrics, request forwarding |
+| 1. Working Proxy | In Progress | Axum listener, round-robin routing, local admin/metrics, request forwarding |
 | 2. Fleet Visibility | Todo | Background /metrics scraper, LeastLoad + LowestLatency strategies, Prometheus metrics export |
 | 3. Prefix Awareness | Todo | Prefix metadata store, PrefixLocality strategy |
 | 4. Dashboard & Observability | Todo | Web dashboard for fleet state, health visualization, routing analytics |
@@ -242,7 +242,7 @@ metrics:
 
 ## Design Principles
 
-- **Pingora Core:** Proxy and routing logic built entirely on Pingora.
+- **Axum Core:** Proxy and routing logic built entirely on Axum.
 - **Metrics-Driven:** All routing decisions based on scraped metrics from backend inference engines.
 - **Learning Focus:** Explicitly scoped for Rust systems mastery: async patterns, zero-copy routing, concurrent state management, and observability.
 - **Observability First:** Comprehensive metrics, tracing, and logging at every layer.
