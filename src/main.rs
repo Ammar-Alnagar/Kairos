@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, post}
+    routing::{get, post},
 };
 use tokio::net::TcpListener;
 pub mod func;

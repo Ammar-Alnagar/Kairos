@@ -12,11 +12,7 @@ pub async fn completions(Json(payload): Json<IncReq>) -> axum::Json<Option<Strin
         .await
         .expect("Failed to send request");
 
-    let  data: OutRes = res
-        .json()
-        .await
-        .expect("Failed to parse JSON response");
-
+    let data: OutRes = res.json().await.expect("Failed to parse JSON response");
 
     Json(data.choices[0].message.content.clone())
 }
