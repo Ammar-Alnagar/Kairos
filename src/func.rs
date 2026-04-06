@@ -3,7 +3,7 @@ use axum::Json;
 use reqwest::Client;
 
 pub async fn completions(Json(payload): Json<IncReq>) -> axum::Json<Option<String>> {
-    let client = Client::new();
+    // let client = Client::new();
 
     let res = client
         .post("http://0.0.0.0:8000/v1/chat/completions")
