@@ -1,11 +1,12 @@
 use crate::reqs::*;
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 
 pub async fn completions(
     State(state): State<AppState>,
     Json(payload): Json<IncReq>,
 ) -> axum::Json<Option<String>> {
-    let res = state.client
+    let res = state
+        .client
         .post("http://0.0.0.0:8000/v1/chat/completions")
         .json(&payload)
         .send()
@@ -17,10 +18,9 @@ pub async fn completions(
     Json(data.choices[0].message.content.clone())
 }
 
-pub async fn metrics(
-    State(state): State<AppState>
-) -> axum::Json<String> {
-    let res = state.client
+pub async fn metrics(State(state): State<AppState>) -> axum::Json<String> {
+    let res = state
+        .client
         .get("http://0.0.0.0:8001/metrics")
         .send()
         .await

@@ -1,9 +1,9 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-
+use std::sync::Arc;
 #[derive(Clone)]
 pub struct AppState {
-    pub client: Client,
+    pub client: Arc<Client>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

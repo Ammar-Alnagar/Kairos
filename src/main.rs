@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     Router,
     routing::{get, post},
@@ -11,9 +13,8 @@ use crate::reqs::*;
 
 #[tokio::main]
 async fn main() {
-    let client = Client::new();
+    let client = Arc::new(Client::new());
     let state = AppState { client };
-
     let app = Router::new()
         .route("/", get(|| async { "welcome to the root" }))
         .route("/v1/chat", get(metrics))
