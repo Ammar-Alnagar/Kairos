@@ -42,7 +42,7 @@ impl ProxyHttp for LB {
     }
 }
 
-// RUST_LOG=INFO cargo run --example load_balancer
+// Example: RUST_LOG=INFO cargo run --example load_balancer
 fn main() {
     env_logger::init();
 
@@ -51,11 +51,10 @@ fn main() {
     let mut my_server = Server::new(Some(opt)).unwrap();
     my_server.bootstrap();
 
-    // 127.0.0.1:343" is just a bad server
     let mut upstreams =
         LoadBalancer::try_from_iter(["1.1.1.1:443", "1.0.0.1:443", "127.0.0.1:343"]).unwrap();
 
-    // We add health check in the background so that the bad server is never selected.
+    // Background health check
     let hc = health_check::TcpHealthCheck::new();
     upstreams.set_health_check(hc);
     upstreams.health_check_frequency = Some(Duration::from_secs(1));

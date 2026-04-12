@@ -1,10 +1,18 @@
+use dashmap::DashMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+// Application state
 #[derive(Clone)]
 pub struct AppState {
     pub client: Arc<Client>,
+    pub endpoints: Vec<String>,
+    pub scores: Arc<DashMap<String, f64>>,
+    pub top: Arc<DashMap<String, String>>,
 }
+
+// Incoming request
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InMessages {
@@ -19,7 +27,10 @@ pub struct IncReq {
     pub max_tokens: usize,
     pub temperature: f64,
     pub top_p: f32,
+    pub stream: Option<bool>,
 }
+
+// Upstream response types
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Logprobs {
